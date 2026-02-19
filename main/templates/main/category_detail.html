@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ category.name }}</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .product { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
+    </style>
+</head>
+<body>
+    <h1>{{ category.name }}</h1>
+    <p><a href="{% url 'category_list' %}">← Все категории</a></p>
+
+    <h2>Товары в этой категории:</h2>
+
+    {% for product in products %}
+        <div class="product">
+            <h3><a href="{% url 'product_detail' product.pk %}">{{ product.name }}</a></h3>
+            <p>Цена: {{ product.price }} руб.</p>
+            <p>В наличии: {{ product.stock }} шт.</p>
+        </div>
+    {% empty %}
+        <p>В этой категории пока нет товаров.</p>
+    {% endfor %}
+</body>
+</html>

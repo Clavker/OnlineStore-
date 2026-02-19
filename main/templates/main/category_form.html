@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ action }} категорию</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        form { max-width: 400px; }
+        input[type=text] { width: 100%; padding: 8px; margin: 10px 0; }
+        button { padding: 10px 15px; background: #007bff; color: white; border: none; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>{{ action }} категорию</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        <label>Название категории:</label>
+        <input type="text" name="name" value="{{ category.name|default:'' }}" required>
+        <br>
+        <button type="submit">Сохранить</button>
+        <a href="{% url 'category_list' %}">Отмена</a>
+    </form>
+</body>
+</html>
