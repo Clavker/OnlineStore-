@@ -8,6 +8,8 @@ from .models import (
     Cart, CartItem, Order, OrderItem
 )
 from users.models import User
+from .forms import CartAddForm, CartItemUpdateForm, \
+    OrderForm  # Импортируем формы
 
 
 # ---------- PRODUCT CRUD ----------
@@ -268,48 +270,60 @@ def cart_create(request):
 
 @login_required
 def cart_add_item(request, pk):
+    """Добавление товара в корзину с использованием формы"""
     cart = get_object_or_404(Cart, pk=pk, customer__user=request.user)
 
     if request.method == 'POST':
-        product_id = request.POST.get('product')
-        quantity = int(request.POST.get('quantity', 1))
+        form = CartAddForm(request.POST)
+        if form.is_valid():
+            product_id = form.cleaned_data['product_id']
+            quantity = form.cleaned_data['quantity']
 
-        product = get_object_or_404(Product, pk=product_id)
+            product = get_object_or_404(Product, pk=product_id)
 
-        # Проверка наличия
-        if quantity > product.stock:
-            messages.error(request,
-                           f'Недостаточно товара на складе. Доступно: {product.stock}')
-            return redirect('product_detail', pk=product_id)
-
-        # Добавляем или обновляем позицию в корзине
-        cart_item, created = CartItem.objects.get_or_create(
-            cart=cart,
-            product=product,
-            defaults={'quantity': quantity}
-        )
-
-        if not created:
-            # Если товар уже в корзине, увеличиваем количество
-            new_quantity = cart_item.quantity + quantity
-            if new_quantity > product.stock:
+            # Проверка наличия
+            if quantity > product.stock:
                 messages.error(request,
-                               f'Недостаточно товара. В корзине уже {cart_item.quantity}, доступно {product.stock}')
+                               f'Недостаточно товара на складе. Доступно: {product.stock}')
                 return redirect('cart_detail', pk=cart.pk)
 
-            cart_item.quantity = new_quantity
-            cart_item.save()
-            messages.success(request,
-                             f'Количество товара "{product.name}" увеличено до {cart_item.quantity}')
+            # Добавляем или обновляем позицию в корзине
+            cart_item, created = CartItem.objects.get_or_create(
+                cart=cart,
+                product=product,
+                defaults={'quantity': quantity}
+            )
+
+            if not created:
+                # Если товар уже в корзине, увеличиваем количество
+                new_quantity = cart_item.quantity + quantity
+                if new_quantity > product.stock:
+                    messages.error(request,
+                                   f'Недостаточно товара. В корзине уже {cart_item.quantity}, доступно {product.stock}')
+                    return redirect('cart_detail', pk=cart.pk)
+
+                cart_item.quantity = new_quantity
+                cart_item.save()
+                messages.success(request,
+                                 f'Количество товара "{product.name}" увеличено до {cart_item.quantity}')
+            else:
+                messages.success(request,
+                                 f'Товар "{product.name}" добавлен в корзину')
+
+            return redirect('cart_detail', pk=cart.pk)
         else:
-            messages.success(request,
-                             f'Товар "{product.name}" добавлен в корзину')
+            messages.error(request,
+                           'Ошибка в форме. Проверьте введённые данные.')
+    else:
+        # GET запрос - получаем product_id из параметров
+        product_id = request.GET.get('product_id')
+        form = CartAddForm(
+            initial={'product_id': product_id} if product_id else None)
 
-        return redirect('cart_detail', pk=cart.pk)
-
-    # GET запрос - показываем форму добавления
+    # Для GET запроса показываем форму выбора товара
     products = Product.objects.filter(stock__gt=0)
     return render(request, 'main/cart_add_item.html', {
+        'form': form,
         'cart': cart,
         'products': products
     })
@@ -317,27 +331,34 @@ def cart_add_item(request, pk):
 
 @login_required
 def cart_item_update(request, pk):
+    """Обновление количества товара в корзине с использованием формы"""
     cart_item = get_object_or_404(CartItem, pk=pk,
                                   cart__customer__user=request.user)
 
     if request.method == 'POST':
-        quantity = int(request.POST.get('quantity', 1))
+        form = CartItemUpdateForm(request.POST)
+        if form.is_valid():
+            quantity = form.cleaned_data['quantity']
 
-        if quantity > cart_item.product.stock:
-            messages.error(request,
-                           f'Недостаточно товара. Доступно: {cart_item.product.stock}')
-        elif quantity <= 0:
-            cart_item.delete()
-            messages.success(request, 'Товар удалён из корзины')
-        else:
-            cart_item.quantity = quantity
-            cart_item.save()
-            messages.success(request, 'Количество обновлено')
+            if quantity > cart_item.product.stock:
+                messages.error(request,
+                               f'Недостаточно товара. Доступно: {cart_item.product.stock}')
+            elif quantity <= 0:
+                cart_item.delete()
+                messages.success(request, 'Товар удалён из корзины')
+            else:
+                cart_item.quantity = quantity
+                cart_item.save()
+                messages.success(request, 'Количество обновлено')
 
-        return redirect('cart_detail', pk=cart_item.cart.pk)
+            return redirect('cart_detail', pk=cart_item.cart.pk)
+    else:
+        form = CartItemUpdateForm(initial={'quantity': cart_item.quantity})
 
-    return render(request, 'main/cart_item_form.html',
-                  {'cart_item': cart_item})
+    return render(request, 'main/cart_item_form.html', {
+        'form': form,
+        'cart_item': cart_item
+    })
 
 
 @login_required
@@ -371,50 +392,86 @@ def order_detail(request, pk):
 @login_required
 @transaction.atomic
 def order_create_from_cart(request, cart_id):
+    """Оформление заказа из корзины с использованием формы OrderForm"""
     cart = get_object_or_404(Cart, pk=cart_id, customer__user=request.user)
 
-    # Проверяем, что корзина не пуста
-    if not cart.items.exists():
-        messages.error(request, 'Корзина пуста')
-        return redirect('cart_detail', pk=cart.pk)
+    if request.method == 'POST':
+        form = OrderForm(request.POST)
+        if form.is_valid():
+            # Получаем данные из формы
+            name = form.cleaned_data['name']
+            address = form.cleaned_data['address']
+            email = form.cleaned_data['email']
+            comment = form.cleaned_data.get('comment', '')
 
-    # Проверяем наличие всех товаров
-    for item in cart.items.all():
-        if item.quantity > item.product.stock:
-            messages.error(
-                request,
-                f'Товара "{item.product.name}" недостаточно на складе. '
-                f'Доступно: {item.product.stock}, в корзине: {item.quantity}'
+            # Здесь можно сохранить эти данные в заказ, если расширить модель Order
+            # Например, добавить поля delivery_address, contact_email и т.д.
+
+            # Проверяем, что корзина не пуста
+            if not cart.items.exists():
+                messages.error(request, 'Корзина пуста')
+                return redirect('cart_detail', pk=cart.pk)
+
+            # Проверяем наличие всех товаров
+            for item in cart.items.all():
+                if item.quantity > item.product.stock:
+                    messages.error(
+                        request,
+                        f'Товара "{item.product.name}" недостаточно на складе. '
+                        f'Доступно: {item.product.stock}, в корзине: {item.quantity}'
+                    )
+                    return redirect('cart_detail', pk=cart.pk)
+
+            # Создаём заказ
+            total_price = sum(
+                item.product.price * item.quantity for item in
+                cart.items.all())
+
+            order = Order.objects.create(
+                customer=cart.customer,
+                total_price=total_price,
+                status='new'
+                # Если добавили поля в модель:
+                # delivery_address=address,
+                # contact_email=email,
+                # comment=comment
             )
-            return redirect('cart_detail', pk=cart.pk)
 
-    # Создаём заказ
-    total_price = sum(
-        item.product.price * item.quantity for item in cart.items.all())
+            # Переносим позиции из корзины в заказ
+            for item in cart.items.all():
+                OrderItem.objects.create(
+                    order=order,
+                    product=item.product,
+                    quantity=item.quantity,
+                    price=item.product.price
+                )
+                # Уменьшаем количество товара на складе
+                item.product.stock -= item.quantity
+                item.product.save()
 
-    order = Order.objects.create(
-        customer=cart.customer,
-        total_price=total_price,
-        status='new'
-    )
+            # Очищаем корзину
+            cart.items.all().delete()
 
-    # Переносим позиции из корзины в заказ
-    for item in cart.items.all():
-        OrderItem.objects.create(
-            order=order,
-            product=item.product,
-            quantity=item.quantity,
-            price=item.product.price
-        )
-        # Уменьшаем количество товара на складе
-        item.product.stock -= item.quantity
-        item.product.save()
+            messages.success(request, f'Заказ №{order.id} успешно оформлен!')
+            return redirect('order_detail', pk=order.pk)
+    else:
+        # Передаём в форму текущую корзину и данные пользователя, если есть
+        initial_data = {
+            'cart': cart.id,
+        }
+        if hasattr(request.user, 'customer'):
+            customer = request.user.customer
+            initial_data.update({
+                'name': f"{customer.user.last_name} {customer.user.first_name}",
+                'address': f"{customer.country}, {customer.city}, {customer.street_address}",
+                'email': customer.user.email,
+            })
+        form = OrderForm(initial=initial_data)
 
-    # Очищаем корзину
-    cart.items.all().delete()
-
-    messages.success(request, f'Заказ №{order.id} успешно оформлен!')
-    return redirect('order_detail', pk=order.pk)
+    return render(request, 'main/order_create.html', {
+        'form': form,
+        'cart': cart
+    })
 
 
 @login_required
