@@ -168,3 +168,61 @@ class OrderItem(models.Model):
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
+
+
+class StockMovement(models.Model):
+    """Модель для учёта движения товаров (приход/расход)"""
+    MOVEMENT_TYPES = [
+        ('in', 'Приход'),
+        ('out', 'Расход'),
+        ('sale', 'Продажа'),
+        ('return', 'Возврат'),
+        ('adjustment', 'Корректировка'),
+    ]
+
+    product = models.ForeignKey(
+        Product,
+        on_delete=models.CASCADE,
+        related_name='stock_movements',
+        verbose_name="Товар"
+    )
+    quantity = models.IntegerField(verbose_name="Количество")
+    movement_type = models.CharField(
+        max_length=20,
+        choices=MOVEMENT_TYPES,
+        verbose_name="Тип движения"
+    )
+    reference = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name="Ссылка на документ"
+    )
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="Дата")
+    created_by = models.ForeignKey(
+        'users.User',
+        on_delete=models.SET_NULL,
+        null=True,
+        verbose_name="Кто создал"
+    )
+    comment = models.TextField(blank=True, verbose_name="Комментарий")
+
+    class Meta:
+        verbose_name = "Движение товара"
+        verbose_name_plural = "Движения товаров"
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.get_movement_type_display()}: {self.product.name} ({self.quantity})"
+
+    def save(self, *args, **kwargs):
+        """При сохранении движения обновляем остаток товара"""
+        super().save(*args, **kwargs)
+
+        # Обновляем остаток товара
+        if self.movement_type in ['in', 'return']:
+            self.product.stock += self.quantity
+        elif self.movement_type in ['out', 'sale']:
+            self.product.stock -= self.quantity
+        # Для 'adjustment' просто устанавливаем новое значение
+
+        self.product.save()
