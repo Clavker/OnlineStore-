@@ -10,6 +10,9 @@ from .models import (
 from users.models import User
 from .forms import CartAddForm, CartItemUpdateForm, \
     OrderForm  # Импортируем формы
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth import login
+from django.urls import reverse_lazy
 
 
 # ---------- PRODUCT CRUD ----------
@@ -497,3 +500,23 @@ def order_update_status(request, pk):
         'order': order,
         'status_choices': Order.STATUS_CHOICES
     })
+
+
+def register(request):
+    """Регистрация нового пользователя"""
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)  # автоматически входим после регистрации
+            messages.success(request, 'Регистрация прошла успешно!')
+            return redirect('product_list')  # перенаправляем на список товаров
+    else:
+        form = UserCreationForm()
+
+    return render(request, 'registration/register.html', {'form': form})
+
+
+def home_view(request):
+    """Главная страница"""
+    return render(request, 'main/home.html')
