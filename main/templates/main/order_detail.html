@@ -1,0 +1,63 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Заказ №{{ order.id }}{% endblock %}
+
+{% block content %}
+<h1>Заказ №{{ order.id }}</h1>
+
+<div style="background: white; padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem;">
+    <p><strong>Дата заказа:</strong> {{ order.created_at|date:"d.m.Y H:i" }}</p>
+    <p><strong>Статус:</strong>
+        <span style="padding: 0.25rem 0.5rem; border-radius: 4px;
+                     {% if order.status == 'new' %}background-color: #17a2b8; color: white;
+                     {% elif order.status == 'processing' %}background-color: #ffc107; color: black;
+                     {% elif order.status == 'shipped' %}background-color: #007bff; color: white;
+                     {% elif order.status == 'delivered' %}background-color: #28a745; color: white;
+                     {% elif order.status == 'cancelled' %}background-color: #dc3545; color: white;
+                     {% endif %}">
+            {{ order.get_status_display }}
+        </span>
+    </p>
+    <p><strong>Общая сумма:</strong> {{ order.total_price }} ₽</p>
+</div>
+
+<h2>Состав заказа</h2>
+<table>
+    <thead>
+        <tr>
+            <th>Товар</th>
+            <th>Цена</th>
+            <th>Количество</th>
+            <th>Сумма</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for item in order.items.all %}
+            <tr>
+                <td>
+                    <a href="{% url 'product_detail' item.product.pk %}">{{ item.product.name }}</a>
+                </td>
+                <td>{{ item.price }} ₽</td>
+                <td>{{ item.quantity }}</td>
+                <td>{% widthratio item.quantity 1 item.price %} ₽</td>
+            </tr>
+        {% endfor %}
+    </tbody>
+    <tfoot>
+        <tr>
+            <th colspan="3">Итого:</th>
+            <th>{{ order.total_price }} ₽</th>
+        </tr>
+    </tfoot>
+</table>
+
+{% if user.is_staff %}
+    <div style="margin-top: 2rem;">
+        <a href="{% url 'order_update_status' order.pk %}" class="btn btn-success">Изменить статус</a>
+    </div>
+{% endif %}
+
+<div style="margin-top: 2rem;">
+    <a href="{% url 'order_list' %}" class="btn btn-primary">← Назад к заказам</a>
+</div>
+{% endblock %}

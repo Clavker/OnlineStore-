@@ -5,14 +5,31 @@ from django.db import transaction
 from django.contrib import messages
 from .models import (
     Category, Product, Customer,
-    Cart, CartItem, Order, OrderItem
+    Cart, CartItem, Order, OrderItem,
+    StockMovement
 )
 from users.models import User
-from .forms import CartAddForm, CartItemUpdateForm, \
-    OrderForm  # Импортируем формы
+from .forms import CartAddForm, CartItemUpdateForm, OrderForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 from django.urls import reverse_lazy
+from django import forms
+
+
+# Кастомная форма регистрации для работы с нашей моделью User
+class CustomUserCreationForm(UserCreationForm):
+    email = forms.EmailField(required=True, label='Email')
+
+    class Meta:
+        model = User
+        fields = ("username", "email", "password1", "password2")
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data["email"]
+        if commit:
+            user.save()
+        return user
 
 
 # ---------- PRODUCT CRUD ----------
@@ -235,8 +252,6 @@ def customer_delete(request, pk):
     if request.method == 'POST':
         user = customer.user
         customer.delete()
-        # Если хотим удалить и пользователя:
-        # user.delete()
         messages.success(request, 'Профиль клиента удалён')
         return redirect('customer_list')
 
@@ -407,9 +422,6 @@ def order_create_from_cart(request, cart_id):
             email = form.cleaned_data['email']
             comment = form.cleaned_data.get('comment', '')
 
-            # Здесь можно сохранить эти данные в заказ, если расширить модель Order
-            # Например, добавить поля delivery_address, contact_email и т.д.
-
             # Проверяем, что корзина не пуста
             if not cart.items.exists():
                 messages.error(request, 'Корзина пуста')
@@ -433,11 +445,11 @@ def order_create_from_cart(request, cart_id):
             order = Order.objects.create(
                 customer=cart.customer,
                 total_price=total_price,
-                status='new'
-                # Если добавили поля в модель:
-                # delivery_address=address,
-                # contact_email=email,
-                # comment=comment
+                status='new',
+                delivery_name=name,
+                delivery_address=address,
+                contact_email=email,
+                comment=comment
             )
 
             # Переносим позиции из корзины в заказ
@@ -448,9 +460,18 @@ def order_create_from_cart(request, cart_id):
                     quantity=item.quantity,
                     price=item.product.price
                 )
-                # Уменьшаем количество товара на складе
-                item.product.stock -= item.quantity
-                item.product.save()
+
+                # Создаём запись о движении товара - ОНА САМА ОБНОВИТ ОСТАТОК!
+                StockMovement.objects.create(
+                    product=item.product,
+                    quantity=item.quantity,
+                    movement_type='sale',
+                    reference=f'Заказ #{order.id}',
+                    created_by=request.user,
+                    comment=f'Продажа по заказу #{order.id}'
+                )
+
+                # НЕ УМЕНЬШАЕМ ОСТАТОК ВРУЧНУЮ! StockMovement сделает это сам
 
             # Очищаем корзину
             cart.items.all().delete()
@@ -464,9 +485,10 @@ def order_create_from_cart(request, cart_id):
         }
         if hasattr(request.user, 'customer'):
             customer = request.user.customer
+            full_name = f"{customer.user.last_name} {customer.user.first_name}".strip()
             initial_data.update({
-                'name': f"{customer.user.last_name} {customer.user.first_name}",
-                'address': f"{customer.country}, {customer.city}, {customer.street_address}",
+                'name': full_name or customer.user.username,
+                'address': customer.full_address,
                 'email': customer.user.email,
             })
         form = OrderForm(initial=initial_data)
@@ -503,16 +525,16 @@ def order_update_status(request, pk):
 
 
 def register(request):
-    """Регистрация нового пользователя"""
+    """Регистрация нового пользователя с кастомной формой"""
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)
+        form = CustomUserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            login(request, user)  # автоматически входим после регистрации
+            login(request, user)
             messages.success(request, 'Регистрация прошла успешно!')
-            return redirect('product_list')  # перенаправляем на список товаров
+            return redirect('home')
     else:
-        form = UserCreationForm()
+        form = CustomUserCreationForm()
 
     return render(request, 'registration/register.html', {'form': form})
 

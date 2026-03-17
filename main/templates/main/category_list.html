@@ -1,34 +1,31 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Категории</title>
-    <style>
-        body { font-family: Arial; margin: 20px; }
-        .category { margin: 10px 0; padding: 10px; border: 1px solid #ddd; }
-        .actions { margin-top: 10px; }
-        .actions a, .actions button { margin-right: 10px; }
-    </style>
-</head>
-<body>
-    <h1>Категории товаров</h1>
+{% extends 'main/base.html' %}
 
-    <a href="{% url 'category_create' %}">➕ Создать категорию</a>
+{% block title %}Категории товаров{% endblock %}
 
+{% block content %}
+<h1>Категории товаров</h1>
+
+{% if user.is_staff %}
+    <a href="{% url 'category_create' %}" class="btn btn-success" style="margin-bottom: 1rem;">➕ Добавить категорию</a>
+{% endif %}
+
+<div class="product-grid">
     {% for category in categories %}
-        <div class="category">
-            <h3>{{ category.name }}</h3>
+        <div class="product-card">
+            <h2 class="product-name">
+                <a href="{% url 'category_detail' category.pk %}">{{ category.name }}</a>
+            </h2>
             <p>Товаров в категории: {{ category.products.count }}</p>
-            <div class="actions">
-                <a href="{% url 'category_detail' category.pk %}">👁️ Просмотр</a>
-                <a href="{% url 'category_update' category.pk %}">✏️ Редактировать</a>
-                <a href="{% url 'category_delete' category.pk %}">❌ Удалить</a>
-            </div>
+
+            {% if user.is_staff %}
+                <div style="margin-top: 1rem;">
+                    <a href="{% url 'category_update' category.pk %}" class="btn btn-success">✏️ Редактировать</a>
+                    <a href="{% url 'category_delete' category.pk %}" class="btn btn-danger">🗑️ Удалить</a>
+                </div>
+            {% endif %}
         </div>
     {% empty %}
         <p>Категорий пока нет.</p>
     {% endfor %}
-
-    <br>
-    <a href="{% url 'product_list' %}">← К товарам</a>
-</body>
-</html>
+</div>
+{% endblock %}

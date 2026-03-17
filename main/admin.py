@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import (
-    Category, Product, Customer, Cart,
-    CartItem, Order, OrderItem, StockMovement
+    Category, Product, Customer,
+    Cart, CartItem, Order, OrderItem,
+    StockMovement
 )
 
 
@@ -16,6 +17,11 @@ class ProductAdmin(admin.ModelAdmin):
     list_display = ('id', 'name', 'price', 'stock', 'category')
     list_filter = ('category',)
     search_fields = ('name', 'description')
+    list_editable = ('price',
+                     'stock')  # Добавь эту строку — позволит редактировать прямо в списке
+    fields = ('name', 'description', 'price', 'stock',
+              'category')  # все поля для редактирования
+    # Если есть readonly_fields — удали оттуда stock
 
 
 @admin.register(Customer)

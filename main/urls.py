@@ -2,11 +2,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
-    # Homepage
+    # Главная страница (доступна по /)
     path('', views.home_view, name='home'),
 
-    # Products
-    path('products/', views.product_list, name='product_list'),
+    # Products — ВСЕ с префиксом product/ (без s)
+    path('product/', views.product_list, name='product_list'),
     path('product/<int:pk>/', views.product_detail, name='product_detail'),
     path('product/create/', views.product_create, name='product_create'),
     path('product/<int:pk>/update/', views.product_update,
@@ -51,7 +51,4 @@ urlpatterns = [
          views.order_create_from_cart, name='order_create_from_cart'),
     path('orders/<int:pk>/update-status/', views.order_update_status,
          name='order_update_status'),
-
-    # Registration
-    path('register/', views.register, name='register'),
-]  # <-- закрывающая скобка здесь, без отступа
+]

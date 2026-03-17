@@ -1,5 +1,5 @@
 from django.db import models
-from users.models import User  # импортируем нашу кастомную модель
+from users.models import User
 
 
 class Category(models.Model):
@@ -9,6 +9,7 @@ class Category(models.Model):
     class Meta:
         verbose_name = "Категория"
         verbose_name_plural = "Категории"
+        ordering = ['name']
 
     def __str__(self):
         return self.name
@@ -27,10 +28,15 @@ class Product(models.Model):
         related_name='products',
         verbose_name="Категория"
     )
+    created_at = models.DateTimeField(auto_now_add=True,
+                                      verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True,
+                                      verbose_name="Дата обновления")
 
     class Meta:
         verbose_name = "Товар"
         verbose_name_plural = "Товары"
+        ordering = ['-created_at']
 
     def __str__(self):
         return self.name
@@ -44,18 +50,39 @@ class Customer(models.Model):
         related_name='customer',
         verbose_name="Пользователь"
     )
-    phone = models.CharField(max_length=20, verbose_name="Телефон")
-    country = models.CharField(max_length=100, verbose_name="Страна")
-    city = models.CharField(max_length=100, verbose_name="Город")
+    phone = models.CharField(max_length=20, verbose_name="Телефон", blank=True)
+    country = models.CharField(max_length=100, verbose_name="Страна",
+                               blank=True)
+    city = models.CharField(max_length=100, verbose_name="Город", blank=True)
     street_address = models.CharField(max_length=255,
-                                      verbose_name="Улица, дом, квартира")
+                                      verbose_name="Улица, дом, квартира",
+                                      blank=True)
+    created_at = models.DateTimeField(auto_now_add=True,
+                                      verbose_name="Дата регистрации")
 
     class Meta:
         verbose_name = "Клиент"
         verbose_name_plural = "Клиенты"
 
     def __str__(self):
-        return f"{self.user.last_name} {self.user.first_name}"
+        return f"{self.user.last_name} {self.user.first_name}".strip() or self.user.username
+
+    @property
+    def cart(self):
+        """
+        Возвращает активную корзину клиента.
+        Если корзины нет - создаёт новую.
+        """
+        cart = self.carts.first()
+        if not cart:
+            cart = Cart.objects.create(customer=self)
+        return cart
+
+    @property
+    def full_address(self):
+        """Полный адрес клиента одной строкой"""
+        parts = [self.country, self.city, self.street_address]
+        return ", ".join(filter(None, parts))
 
 
 class Cart(models.Model):
@@ -68,13 +95,31 @@ class Cart(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True,
                                       verbose_name="Дата создания")
+    updated_at = models.DateTimeField(auto_now=True,
+                                      verbose_name="Дата обновления")
 
     class Meta:
         verbose_name = "Корзина"
         verbose_name_plural = "Корзины"
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"Корзина {self.customer} от {self.created_at.strftime('%d.%m.%Y')}"
+        return f"Корзина {self.customer} от {self.created_at.strftime('%d.%m.%Y %H:%M')}"
+
+    @property
+    def total_price(self):
+        """Общая стоимость всех товаров в корзине"""
+        return sum(item.total_price for item in self.items.all())
+
+    @property
+    def total_items(self):
+        """Количество позиций в корзине (разных товаров)"""
+        return self.items.count()
+
+    @property
+    def total_quantity(self):
+        """Общее количество единиц товара в корзине"""
+        return sum(item.quantity for item in self.items.all())
 
 
 class CartItem(models.Model):
@@ -88,19 +133,28 @@ class CartItem(models.Model):
     product = models.ForeignKey(
         Product,
         on_delete=models.CASCADE,
+        related_name='cart_items',
         verbose_name="Товар"
     )
     quantity = models.PositiveIntegerField(default=1,
                                            verbose_name="Количество")
+    added_at = models.DateTimeField(auto_now_add=True,
+                                    verbose_name="Дата добавления")
 
     class Meta:
         verbose_name = "Позиция корзины"
         verbose_name_plural = "Позиции корзины"
         unique_together = ('cart',
                            'product')  # чтобы один товар не дублировался в корзине
+        ordering = ['-added_at']
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
+
+    @property
+    def total_price(self):
+        """Стоимость данной позиции"""
+        return self.product.price * self.quantity
 
 
 class Order(models.Model):
@@ -121,6 +175,8 @@ class Order(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True,
                                       verbose_name="Дата заказа")
+    updated_at = models.DateTimeField(auto_now=True,
+                                      verbose_name="Дата обновления")
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
@@ -133,6 +189,15 @@ class Order(models.Model):
         verbose_name="Общая сумма"
     )
 
+    # Поля для дополнительной информации из формы заказа
+    delivery_name = models.CharField(max_length=255,
+                                     verbose_name="Имя получателя", blank=True)
+    delivery_address = models.TextField(verbose_name="Адрес доставки",
+                                        blank=True)
+    contact_email = models.EmailField(verbose_name="Контактный email",
+                                      blank=True)
+    comment = models.TextField(verbose_name="Комментарий к заказу", blank=True)
+
     class Meta:
         verbose_name = "Заказ"
         verbose_name_plural = "Заказы"
@@ -140,6 +205,16 @@ class Order(models.Model):
 
     def __str__(self):
         return f"Заказ №{self.id} от {self.customer}"
+
+    @property
+    def status_display(self):
+        """Отображение статуса на русском"""
+        return dict(self.STATUS_CHOICES).get(self.status, self.status)
+
+    @property
+    def total_quantity(self):
+        """Общее количество единиц товара в заказе"""
+        return sum(item.quantity for item in self.items.all())
 
 
 class OrderItem(models.Model):
@@ -153,6 +228,7 @@ class OrderItem(models.Model):
     product = models.ForeignKey(
         Product,
         on_delete=models.PROTECT,
+        related_name='order_items',
         verbose_name="Товар"
     )
     quantity = models.PositiveIntegerField(verbose_name="Количество")
@@ -165,9 +241,15 @@ class OrderItem(models.Model):
     class Meta:
         verbose_name = "Позиция заказа"
         verbose_name_plural = "Позиции заказа"
+        ordering = ['id']
 
     def __str__(self):
         return f"{self.product.name} x {self.quantity}"
+
+    @property
+    def total_price(self):
+        """Стоимость позиции в заказе"""
+        return self.price * self.quantity
 
 
 class StockMovement(models.Model):
@@ -216,13 +298,19 @@ class StockMovement(models.Model):
 
     def save(self, *args, **kwargs):
         """При сохранении движения обновляем остаток товара"""
+        # Сохраняем оригинальное количество до изменения
+        old_quantity = self.product.stock
+
+        # Сначала сохраняем само движение
         super().save(*args, **kwargs)
 
-        # Обновляем остаток товара
+        # Затем обновляем остаток товара
         if self.movement_type in ['in', 'return']:
             self.product.stock += self.quantity
         elif self.movement_type in ['out', 'sale']:
             self.product.stock -= self.quantity
-        # Для 'adjustment' просто устанавливаем новое значение
+        elif self.movement_type == 'adjustment':
+            # Для корректировки устанавливаем точное значение
+            self.product.stock = self.quantity
 
         self.product.save()
