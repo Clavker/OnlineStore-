@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Добавить в корзину</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        form { max-width: 300px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        input, select { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        button { padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h1>Добавить товар в корзину</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit">Добавить в корзину</button>
+    </form>
+
+    <p><a href="{% url 'product_list' %}">Вернуться к каталогу</a></p>
+</body>
+</html>

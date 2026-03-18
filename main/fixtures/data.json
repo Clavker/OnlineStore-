@@ -1,0 +1,78 @@
+[
+  {
+    "model": "main.category",
+    "pk": 1,
+    "fields": {
+      "name": "Электроника"
+    }
+  },
+  {
+    "model": "main.category",
+    "pk": 2,
+    "fields": {
+      "name": "Одежда"
+    }
+  },
+  {
+    "model": "main.category",
+    "pk": 3,
+    "fields": {
+      "name": "Книги"
+    }
+  },
+  {
+    "model": "main.product",
+    "pk": 1,
+    "fields": {
+      "name": "Смартфон X",
+      "description": "Флагманский смартфон с отличной камерой и большим экраном",
+      "price": "59990.00",
+      "stock": 10,
+      "category": 1
+    }
+  },
+  {
+    "model": "main.product",
+    "pk": 2,
+    "fields": {
+      "name": "Ноутбук Pro",
+      "description": "Мощный ноутбук для работы и игр с процессором Intel i7",
+      "price": "89990.00",
+      "stock": 5,
+      "category": 1
+    }
+  },
+  {
+    "model": "main.product",
+    "pk": 3,
+    "fields": {
+      "name": "Футболка Cotton",
+      "description": "Хлопковая футболка, доступные размеры S-XXL",
+      "price": "1990.00",
+      "stock": 20,
+      "category": 2
+    }
+  },
+  {
+    "model": "main.product",
+    "pk": 4,
+    "fields": {
+      "name": "Джинсы Classic",
+      "description": "Классические джинсы из качественного денима",
+      "price": "3990.00",
+      "stock": 15,
+      "category": 2
+    }
+  },
+  {
+    "model": "main.product",
+    "pk": 5,
+    "fields": {
+      "name": "Python для начинающих",
+      "description": "Книга по программированию на Python для новичков",
+      "price": "1500.00",
+      "stock": 7,
+      "category": 3
+    }
+  }
+]

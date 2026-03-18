@@ -1,0 +1,32 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Главная страница{% endblock %}
+
+{% block content %}
+<div style="text-align: center; padding: 3rem 0;">
+    <h1 style="font-size: 3rem; color: #333; margin-bottom: 1rem;">Добро пожаловать в наш магазин!</h1>
+    <p style="font-size: 1.2rem; color: #666; margin-bottom: 2rem;">Лучшие товары по лучшим ценам</p>
+
+    <div style="display: flex; gap: 1rem; justify-content: center;">
+        <a href="{% url 'product_list' %}" class="btn btn-primary">Перейти к товарам</a>
+        <a href="{% url 'category_list' %}" class="btn btn-primary">Категории</a>
+    </div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-top: 3rem;">
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h3 style="color: #667eea; margin-bottom: 1rem;">🚀 Быстрая доставка</h3>
+        <p style="color: #666;">Доставляем заказы в кратчайшие сроки</p>
+    </div>
+
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h3 style="color: #667eea; margin-bottom: 1rem;">💎 Гарантия качества</h3>
+        <p style="color: #666;">Только сертифицированные товары</p>
+    </div>
+
+    <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        <h3 style="color: #667eea; margin-bottom: 1rem;">💰 Низкие цены</h3>
+        <p style="color: #666;">Регулярные скидки и акции</p>
+    </div>
+</div>
+{% endblock %}

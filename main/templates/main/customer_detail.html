@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Профиль {{ customer.user.username }}</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .profile-info { max-width: 500px; }
+        .info-item { margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 4px; }
+        .label { font-weight: bold; color: #555; }
+        .btn { display: inline-block; padding: 10px 20px; margin: 10px 5px; text-decoration: none; border-radius: 4px; }
+        .btn-edit { background: #007bff; color: white; }
+        .btn-back { background: #6c757d; color: white; }
+    </style>
+</head>
+<body>
+    <h1>Личный кабинет</h1>
+
+    <div class="profile-info">
+        <div class="info-item">
+            <span class="label">Имя пользователя:</span> {{ customer.user.username }}
+        </div>
+        <div class="info-item">
+            <span class="label">Email:</span> {{ customer.user.email }}
+        </div>
+        <div class="info-item">
+            <span class="label">Телефон:</span> {{ customer.phone }}
+        </div>
+        <div class="info-item">
+            <span class="label">Адрес:</span> {{ customer.country }}, {{ customer.city }}, {{ customer.street_address }}
+        </div>
+    </div>
+
+    <div>
+        <a href="{% url 'customer_update' customer.pk %}" class="btn btn-edit">Редактировать профиль</a>
+        <a href="{% url 'home' %}" class="btn btn-back">На главную</a>
+    </div>
+</body>
+</html>

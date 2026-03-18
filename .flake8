@@ -1,0 +1,10 @@
+[flake8]
+max-line-length = 120
+exclude =
+    migrations,
+    __pycache__,
+    manage.py,
+    settings.py,
+    */migrations/*,
+    main/testsdontuse.py
+ignore = E501,W503

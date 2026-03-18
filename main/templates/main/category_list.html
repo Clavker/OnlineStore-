@@ -1,0 +1,31 @@
+{% extends 'main/base.html' %}
+
+{% block title %}Категории товаров{% endblock %}
+
+{% block content %}
+<h1>Категории товаров</h1>
+
+{% if user.is_staff %}
+    <a href="{% url 'category_create' %}" class="btn btn-success" style="margin-bottom: 1rem;">➕ Добавить категорию</a>
+{% endif %}
+
+<div class="product-grid">
+    {% for category in categories %}
+        <div class="product-card">
+            <h2 class="product-name">
+                <a href="{% url 'category_detail' category.pk %}">{{ category.name }}</a>
+            </h2>
+            <p>Товаров в категории: {{ category.products.count }}</p>
+
+            {% if user.is_staff %}
+                <div style="margin-top: 1rem;">
+                    <a href="{% url 'category_update' category.pk %}" class="btn btn-success">✏️ Редактировать</a>
+                    <a href="{% url 'category_delete' category.pk %}" class="btn btn-danger">🗑️ Удалить</a>
+                </div>
+            {% endif %}
+        </div>
+    {% empty %}
+        <p>Категорий пока нет.</p>
+    {% endfor %}
+</div>
+{% endblock %}

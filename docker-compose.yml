@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: online_store_db
+    restart: always
+    environment:
+      POSTGRES_USER: django_user
+      POSTGRES_PASSWORD: secure_password
+      POSTGRES_DB: online_store_db
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    ports:
+      - "5433:5432"  # проброс на другой порт, чтобы не конфликтовать с локальным PostgreSQL
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U django_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    container_name: online_store_web
+    restart: always
+    command: >
+      sh -c "
+      python manage.py migrate &&
+      python manage.py runserver 0.0.0.0:8000
+      "
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DJANGO_SETTINGS_MODULE: online_store.settings
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: online_store_db
+      DB_USER: django_user
+      DB_PASSWORD: secure_password
+
+volumes:
+  postgres_data:

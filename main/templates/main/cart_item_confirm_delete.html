@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Удаление товара из корзины</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .container { max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        h1 { color: #333; }
+        .warning { color: #dc3545; font-weight: bold; margin: 20px 0; }
+        .product-info { background: #f8f9fa; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .btn { padding: 10px 20px; margin-right: 10px; border: none; border-radius: 4px; cursor: pointer; text-decoration: none; display: inline-block; }
+        .btn-danger { background: #dc3545; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .btn:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Подтверждение удаления</h1>
+
+        <div class="warning">
+            ⚠️ Вы уверены, что хотите удалить этот товар из корзины?
+        </div>
+
+        <div class="product-info">
+            <p><strong>Товар:</strong> {{ cart_item.product.name }}</p>
+            <p><strong>Количество:</strong> {{ cart_item.quantity }}</p>
+            <p><strong>Цена:</strong> {{ cart_item.product.price }} ₽</p>
+            <p><strong>Сумма:</strong> {{ cart_item.total_price }} ₽</p>
+        </div>
+
+        <form method="post" style="display: inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Да, удалить</button>
+        </form>
+        <a href="{% url 'cart_detail' cart_item.cart.pk %}" class="btn btn-secondary">Отмена</a>
+    </div>
+</body>
+</html>
