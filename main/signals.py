@@ -5,6 +5,7 @@ from .models import Customer
 
 @receiver(post_save, sender=User)
 def create_customer_profile(sender, instance, created, **kwargs):
+    """Автоматически создаём профиль Customer при создании User"""
     if created:
         Customer.objects.create(
             user=instance,
