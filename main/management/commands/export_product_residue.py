@@ -1,16 +1,15 @@
 from django.core.management.base import BaseCommand, CommandError
+from django.db import models
 from main.models import Product, StockMovement
 import csv
-import os
-from datetime import datetime
-from django.utils import timezone
-from django.db import models
 
 
 class Command(BaseCommand):
+    """Команда для экспорта остатков товаров в CSV или JSON"""
     help = 'Экспортирует остатки товаров в CSV файл'
 
     def add_arguments(self, parser):
+        """Добавление аргументов командной строки"""
         parser.add_argument(
             '--output',
             type=str,
@@ -46,6 +45,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
+        """Основная логика команды"""
         output_file = options['output']
         file_format = options['format']
         include_movements = options['include_movements']
@@ -58,10 +58,12 @@ class Command(BaseCommand):
             # Проверяем, является ли аргумент числом (ID)
             if options['category'].isdigit():
                 products = products.filter(
-                    category_id=int(options['category']))
+                    category_id=int(options['category'])
+                )
             else:
                 products = products.filter(
-                    category__name__icontains=options['category'])
+                    category__name__icontains=options['category']
+                )
 
         if options['min_stock'] is not None:
             products = products.filter(stock__gte=options['min_stock'])
@@ -73,7 +75,8 @@ class Command(BaseCommand):
         if not products.exists():
             self.stdout.write(
                 self.style.WARNING(
-                    'Нет товаров, соответствующих критериям фильтрации')
+                    'Нет товаров, соответствующих критериям фильтрации'
+                )
             )
             return
 
@@ -85,7 +88,8 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f'Данные успешно экспортированы в {output_file}')
+                f'Данные успешно экспортированы в {output_file}'
+            )
         )
 
     def _export_csv(self, products, output_file, include_movements):
@@ -121,19 +125,30 @@ class Command(BaseCommand):
                     # Получаем статистику движений, если нужно
                     if include_movements:
                         movements = StockMovement.objects.filter(
-                            product=product)
-                        total_in = \
-                        movements.filter(movement_type='in').aggregate(
-                            models.Sum('quantity'))['quantity__sum'] or 0
+                            product=product
+                        )
+                        total_in = movements.filter(
+                            movement_type='in'
+                        ).aggregate(
+                            models.Sum('quantity')
+                        )['quantity__sum'] or 0
                         total_out = movements.filter(
-                            movement_type__in=['out', 'sale']).aggregate(
-                            models.Sum('quantity'))['quantity__sum'] or 0
+                            movement_type__in=['out', 'sale']
+                        ).aggregate(
+                            models.Sum('quantity')
+                        )['quantity__sum'] or 0
                         last_movement = movements.order_by(
-                            '-created_at').first()
+                            '-created_at'
+                        ).first()
 
-                        last_movement_date = last_movement.created_at.strftime(
-                            '%d.%m.%Y %H:%M') if last_movement else ''
-                        last_movement_type = last_movement.get_movement_type_display() if last_movement else ''
+                        last_movement_date = (
+                            last_movement.created_at.strftime('%d.%m.%Y %H:%M')
+                            if last_movement else ''
+                        )
+                        last_movement_type = (
+                            last_movement.get_movement_type_display()
+                            if last_movement else ''
+                        )
 
                     row = [
                         product.id,
@@ -141,11 +156,12 @@ class Command(BaseCommand):
                         product.category.name,
                         f'{product.price:.2f}'.replace('.', ','),
                         product.stock,
-                        f'{product.price * product.stock:.2f}'.replace('.',
-                                                                       ','),
+                        f'{product.price * product.stock:.2f}'.replace(
+                            '.', ','
+                        ),
                         product.updated_at.strftime(
-                            '%d.%m.%Y %H:%M') if hasattr(product,
-                                                         'updated_at') else ''
+                            '%d.%m.%Y %H:%M'
+                        ) if hasattr(product, 'updated_at') else ''
                     ]
 
                     if include_movements:
@@ -179,7 +195,8 @@ class Command(BaseCommand):
 
             if include_movements:
                 movements = StockMovement.objects.filter(
-                    product=product).order_by('-created_at')
+                    product=product
+                ).order_by('-created_at')
                 movements_data = []
 
                 for movement in movements[:10]:  # Последние 10 движений

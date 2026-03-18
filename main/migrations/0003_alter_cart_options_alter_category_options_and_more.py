@@ -108,3 +108,4 @@ class Migration(migrations.Migration):
             field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name='order_items', to='main.product', verbose_name='Товар'),
         ),
     ]
+

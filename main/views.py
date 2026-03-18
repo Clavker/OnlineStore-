@@ -5,46 +5,29 @@ from django.db import transaction
 from django.contrib import messages
 from .models import (
     Category, Product, Customer,
-    Cart, CartItem, Order, OrderItem,
-    StockMovement
+    Cart, CartItem, Order, OrderItem
 )
-from users.models import User
 from .forms import CartAddForm, CartItemUpdateForm, OrderForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
-from django.urls import reverse_lazy
-from django import forms
-
-
-# Кастомная форма регистрации для работы с нашей моделью User
-class CustomUserCreationForm(UserCreationForm):
-    email = forms.EmailField(required=True, label='Email')
-
-    class Meta:
-        model = User
-        fields = ("username", "email", "password1", "password2")
-
-    def save(self, commit=True):
-        user = super().save(commit=False)
-        user.email = self.cleaned_data["email"]
-        if commit:
-            user.save()
-        return user
 
 
 # ---------- PRODUCT CRUD ----------
 def product_list(request):
+    """Отображает список всех товаров"""
     products = Product.objects.all()
     return render(request, 'main/product_list.html', {'products': products})
 
 
 def product_detail(request, pk):
+    """Отображает детальную информацию о товаре"""
     product = get_object_or_404(Product, pk=pk)
     return render(request, 'main/product_detail.html', {'product': product})
 
 
 @staff_member_required
 def product_create(request):
+    """Создание нового товара (только для персонала)"""
     if request.method == 'POST':
         name = request.POST.get('name')
         description = request.POST.get('description')
@@ -73,6 +56,7 @@ def product_create(request):
 
 @staff_member_required
 def product_update(request, pk):
+    """Редактирование товара (только для персонала)"""
     product = get_object_or_404(Product, pk=pk)
 
     if request.method == 'POST':
@@ -99,6 +83,7 @@ def product_update(request, pk):
 
 @staff_member_required
 def product_delete(request, pk):
+    """Удаление товара (только для персонала)"""
     product = get_object_or_404(Product, pk=pk)
 
     if request.method == 'POST':
@@ -112,12 +97,14 @@ def product_delete(request, pk):
 
 # ---------- CATEGORY CRUD ----------
 def category_list(request):
+    """Отображает список всех категорий"""
     categories = Category.objects.all()
     return render(request, 'main/category_list.html',
                   {'categories': categories})
 
 
 def category_detail(request, pk):
+    """Отображает товары в конкретной категории"""
     category = get_object_or_404(Category, pk=pk)
     products = category.products.all()
     return render(request, 'main/category_detail.html', {
@@ -128,6 +115,7 @@ def category_detail(request, pk):
 
 @staff_member_required
 def category_create(request):
+    """Создание новой категории (только для персонала)"""
     if request.method == 'POST':
         name = request.POST.get('name')
         if name:
@@ -140,6 +128,7 @@ def category_create(request):
 
 @staff_member_required
 def category_update(request, pk):
+    """Редактирование категории (только для персонала)"""
     category = get_object_or_404(Category, pk=pk)
 
     if request.method == 'POST':
@@ -158,6 +147,7 @@ def category_update(request, pk):
 
 @staff_member_required
 def category_delete(request, pk):
+    """Удаление категории (только для персонала)"""
     category = get_object_or_404(Category, pk=pk)
 
     if request.method == 'POST':
@@ -172,7 +162,10 @@ def category_delete(request, pk):
 # ---------- CUSTOMER CRUD ----------
 @login_required
 def customer_list(request):
-    # Только для персонала или просмотр своего профиля
+    """
+    Отображает список клиентов.
+    Для персонала — всех, для обычных пользователей — только свой профиль
+    """
     if request.user.is_staff:
         customers = Customer.objects.all()
     else:
@@ -182,6 +175,7 @@ def customer_list(request):
 
 @login_required
 def customer_detail(request, pk):
+    """Отображает детальную информацию о клиенте"""
     customer = get_object_or_404(Customer, pk=pk)
     # Проверка прав
     if not request.user.is_staff and customer.user != request.user:
@@ -193,6 +187,7 @@ def customer_detail(request, pk):
 
 @login_required
 def customer_create(request):
+    """Создание профиля клиента"""
     # Проверяем, нет ли уже профиля у пользователя
     if hasattr(request.user, 'customer'):
         messages.warning(request, 'У вас уже есть профиль покупателя')
@@ -221,12 +216,15 @@ def customer_create(request):
 
 @login_required
 def customer_update(request, pk):
+    """Редактирование профиля клиента"""
     customer = get_object_or_404(Customer, pk=pk)
 
     # Проверка прав
     if not request.user.is_staff and customer.user != request.user:
-        messages.error(request,
-                       'У вас нет прав для редактирования этого профиля')
+        messages.error(
+            request,
+            'У вас нет прав для редактирования этого профиля'
+        )
         return redirect('product_list')
 
     if request.method == 'POST':
@@ -247,10 +245,10 @@ def customer_update(request, pk):
 
 @staff_member_required
 def customer_delete(request, pk):
+    """Удаление профиля клиента (только для персонала)"""
     customer = get_object_or_404(Customer, pk=pk)
 
     if request.method == 'POST':
-        user = customer.user
         customer.delete()
         messages.success(request, 'Профиль клиента удалён')
         return redirect('customer_list')
@@ -262,19 +260,21 @@ def customer_delete(request, pk):
 # ---------- CART CRUD ----------
 @login_required
 def cart_list(request):
+    """Отображает список корзин текущего пользователя"""
     carts = Cart.objects.filter(customer__user=request.user)
     return render(request, 'main/cart_list.html', {'carts': carts})
 
 
 @login_required
 def cart_detail(request, pk):
+    """Отображает детальную информацию о корзине"""
     cart = get_object_or_404(Cart, pk=pk, customer__user=request.user)
     return render(request, 'main/cart_detail.html', {'cart': cart})
 
 
 @login_required
 def cart_create(request):
-    # Получаем или создаём корзину для текущего пользователя
+    """Создаёт новую корзину для текущего пользователя"""
     customer = get_object_or_404(Customer, user=request.user)
     cart, created = Cart.objects.get_or_create(customer=customer)
 
@@ -301,8 +301,10 @@ def cart_add_item(request, pk):
 
             # Проверка наличия
             if quantity > product.stock:
-                messages.error(request,
-                               f'Недостаточно товара на складе. Доступно: {product.stock}')
+                messages.error(
+                    request,
+                    f'Недостаточно товара на складе. Доступно: {product.stock}'
+                )
                 return redirect('cart_detail', pk=cart.pk)
 
             # Добавляем или обновляем позицию в корзине
@@ -316,27 +318,38 @@ def cart_add_item(request, pk):
                 # Если товар уже в корзине, увеличиваем количество
                 new_quantity = cart_item.quantity + quantity
                 if new_quantity > product.stock:
-                    messages.error(request,
-                                   f'Недостаточно товара. В корзине уже {cart_item.quantity}, доступно {product.stock}')
+                    messages.error(
+                        request,
+                        f'Недостаточно товара. В корзине уже '
+                        f'{cart_item.quantity}, доступно {product.stock}'
+                    )
                     return redirect('cart_detail', pk=cart.pk)
 
                 cart_item.quantity = new_quantity
                 cart_item.save()
-                messages.success(request,
-                                 f'Количество товара "{product.name}" увеличено до {cart_item.quantity}')
+                messages.success(
+                    request,
+                    f'Количество товара "{product.name}" увеличено '
+                    f'до {cart_item.quantity}'
+                )
             else:
-                messages.success(request,
-                                 f'Товар "{product.name}" добавлен в корзину')
+                messages.success(
+                    request,
+                    f'Товар "{product.name}" добавлен в корзину'
+                )
 
             return redirect('cart_detail', pk=cart.pk)
         else:
-            messages.error(request,
-                           'Ошибка в форме. Проверьте введённые данные.')
+            messages.error(
+                request,
+                'Ошибка в форме. Проверьте введённые данные.'
+            )
     else:
         # GET запрос - получаем product_id из параметров
         product_id = request.GET.get('product_id')
         form = CartAddForm(
-            initial={'product_id': product_id} if product_id else None)
+            initial={'product_id': product_id} if product_id else None
+        )
 
     # Для GET запроса показываем форму выбора товара
     products = Product.objects.filter(stock__gt=0)
@@ -350,8 +363,11 @@ def cart_add_item(request, pk):
 @login_required
 def cart_item_update(request, pk):
     """Обновление количества товара в корзине с использованием формы"""
-    cart_item = get_object_or_404(CartItem, pk=pk,
-                                  cart__customer__user=request.user)
+    cart_item = get_object_or_404(
+        CartItem,
+        pk=pk,
+        cart__customer__user=request.user
+    )
 
     if request.method == 'POST':
         form = CartItemUpdateForm(request.POST)
@@ -359,8 +375,10 @@ def cart_item_update(request, pk):
             quantity = form.cleaned_data['quantity']
 
             if quantity > cart_item.product.stock:
-                messages.error(request,
-                               f'Недостаточно товара. Доступно: {cart_item.product.stock}')
+                messages.error(
+                    request,
+                    f'Недостаточно товара. Доступно: {cart_item.product.stock}'
+                )
             elif quantity <= 0:
                 cart_item.delete()
                 messages.success(request, 'Товар удалён из корзины')
@@ -381,8 +399,12 @@ def cart_item_update(request, pk):
 
 @login_required
 def cart_item_delete(request, pk):
-    cart_item = get_object_or_404(CartItem, pk=pk,
-                                  cart__customer__user=request.user)
+    """Удаление товара из корзины"""
+    cart_item = get_object_or_404(
+        CartItem,
+        pk=pk,
+        cart__customer__user=request.user
+    )
     cart_pk = cart_item.cart.pk
 
     if request.method == 'POST':
@@ -397,12 +419,14 @@ def cart_item_delete(request, pk):
 # ---------- ORDER CRUD ----------
 @login_required
 def order_list(request):
+    """Отображает список заказов текущего пользователя"""
     orders = Order.objects.filter(customer__user=request.user)
     return render(request, 'main/order_list.html', {'orders': orders})
 
 
 @login_required
 def order_detail(request, pk):
+    """Отображает детальную информацию о заказе"""
     order = get_object_or_404(Order, pk=pk, customer__user=request.user)
     return render(request, 'main/order_detail.html', {'order': order})
 
@@ -433,23 +457,21 @@ def order_create_from_cart(request, cart_id):
                     messages.error(
                         request,
                         f'Товара "{item.product.name}" недостаточно на складе. '
-                        f'Доступно: {item.product.stock}, в корзине: {item.quantity}'
+                        f'Доступно: {item.product.stock}, '
+                        f'в корзине: {item.quantity}'
                     )
                     return redirect('cart_detail', pk=cart.pk)
 
             # Создаём заказ
             total_price = sum(
-                item.product.price * item.quantity for item in
-                cart.items.all())
+                item.product.price * item.quantity
+                for item in cart.items.all()
+            )
 
             order = Order.objects.create(
                 customer=cart.customer,
                 total_price=total_price,
-                status='new',
-                delivery_name=name,
-                delivery_address=address,
-                contact_email=email,
-                comment=comment
+                status='new'
             )
 
             # Переносим позиции из корзины в заказ
@@ -460,23 +482,17 @@ def order_create_from_cart(request, cart_id):
                     quantity=item.quantity,
                     price=item.product.price
                 )
-
-                # Создаём запись о движении товара - ОНА САМА ОБНОВИТ ОСТАТОК!
-                StockMovement.objects.create(
-                    product=item.product,
-                    quantity=item.quantity,
-                    movement_type='sale',
-                    reference=f'Заказ #{order.id}',
-                    created_by=request.user,
-                    comment=f'Продажа по заказу #{order.id}'
-                )
-
-                # НЕ УМЕНЬШАЕМ ОСТАТОК ВРУЧНУЮ! StockMovement сделает это сам
+                # Уменьшаем количество товара на складе
+                item.product.stock -= item.quantity
+                item.product.save()
 
             # Очищаем корзину
             cart.items.all().delete()
 
-            messages.success(request, f'Заказ №{order.id} успешно оформлен!')
+            messages.success(
+                request,
+                f'Заказ №{order.id} успешно оформлен!'
+            )
             return redirect('order_detail', pk=order.pk)
     else:
         # Передаём в форму текущую корзину и данные пользователя, если есть
@@ -485,10 +501,12 @@ def order_create_from_cart(request, cart_id):
         }
         if hasattr(request.user, 'customer'):
             customer = request.user.customer
-            full_name = f"{customer.user.last_name} {customer.user.first_name}".strip()
             initial_data.update({
-                'name': full_name or customer.user.username,
-                'address': customer.full_address,
+                'name': f"{customer.user.last_name} {customer.user.first_name}",
+                'address': (
+                    f"{customer.country}, {customer.city}, "
+                    f"{customer.street_address}"
+                ),
                 'email': customer.user.email,
             })
         form = OrderForm(initial=initial_data)
@@ -501,11 +519,15 @@ def order_create_from_cart(request, cart_id):
 
 @login_required
 def order_update_status(request, pk):
+    """Обновление статуса заказа (только для персонала)"""
     order = get_object_or_404(Order, pk=pk, customer__user=request.user)
 
     # Обычные пользователи не могут менять статус
     if not request.user.is_staff:
-        messages.error(request, 'У вас нет прав для изменения статуса заказа')
+        messages.error(
+            request,
+            'У вас нет прав для изменения статуса заказа'
+        )
         return redirect('order_detail', pk=order.pk)
 
     if request.method == 'POST':
@@ -513,8 +535,10 @@ def order_update_status(request, pk):
         if new_status in dict(Order.STATUS_CHOICES):
             order.status = new_status
             order.save()
-            messages.success(request,
-                             f'Статус заказа изменён на "{order.get_status_display()}"')
+            messages.success(
+                request,
+                f'Статус заказа изменён на "{order.get_status_display()}"'
+            )
 
         return redirect('order_detail', pk=order.pk)
 
@@ -525,18 +549,22 @@ def order_update_status(request, pk):
 
 
 def register(request):
-    """Регистрация нового пользователя с кастомной формой"""
+    """Регистрация нового пользователя"""
     if request.method == 'POST':
-        form = CustomUserCreationForm(request.POST)
+        form = UserCreationForm(request.POST)
         if form.is_valid():
             user = form.save()
             login(request, user)
             messages.success(request, 'Регистрация прошла успешно!')
-            return redirect('home')
+            return redirect('product_list')
     else:
-        form = CustomUserCreationForm()
+        form = UserCreationForm()
 
-    return render(request, 'registration/register.html', {'form': form})
+    return render(
+        request,
+        'registration/register.html',
+        {'form': form}
+    )
 
 
 def home_view(request):

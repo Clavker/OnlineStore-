@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 from main.models import Product, Category, StockMovement
 import csv
 import os
-from datetime import datetime
 
 User = get_user_model()
 

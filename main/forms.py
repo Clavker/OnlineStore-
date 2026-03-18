@@ -1,10 +1,13 @@
 from django import forms
-from .models import Product, CartItem, Order, Cart
+from .models import CartItem
 
 
 class CartAddForm(forms.Form):
     """Форма для добавления товара в корзину"""
-    product_id = forms.IntegerField(widget=forms.HiddenInput(), required=True)
+    product_id = forms.IntegerField(
+        widget=forms.HiddenInput(),
+        required=True
+    )
     quantity = forms.IntegerField(
         min_value=1,
         initial=1,
@@ -13,6 +16,7 @@ class CartAddForm(forms.Form):
     )
 
     def clean_quantity(self):
+        """Валидация количества"""
         quantity = self.cleaned_data['quantity']
         if quantity < 1:
             raise forms.ValidationError('Количество должно быть не меньше 1')
@@ -28,15 +32,15 @@ class CartItemUpdateForm(forms.Form):
     )
 
     def clean_quantity(self):
+        """Валидация количества"""
         quantity = self.cleaned_data['quantity']
         if quantity < 0:
-            raise forms.ValidationError(
-                'Количество не может быть отрицательным')
+            raise forms.ValidationError('Количество не может быть отрицательным')
         return quantity
 
 
 class OrderForm(forms.Form):
-    """Форма для оформления заказа (как в примере из задания)"""
+    """Форма для оформления заказа"""
     name = forms.CharField(
         max_length=255,
         label='ФИО',
@@ -52,7 +56,7 @@ class OrderForm(forms.Form):
         widget=forms.EmailInput(attrs={'class': 'form-control'})
     )
     cart = forms.ModelChoiceField(
-        queryset=Cart.objects.all(),
+        queryset=CartItem.objects.none(),  # Пустой queryset, будет заменён
         label='Корзина',
         widget=forms.Select(attrs={'class': 'form-control'})
     )
@@ -62,13 +66,8 @@ class OrderForm(forms.Form):
         widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'})
     )
 
-
-# Оставляем старую форму для обратной совместимости, если она где-то используется
-class OrderCreateForm(forms.Form):
-    """Форма для оформления заказа (наша старая версия)"""
-    comment = forms.CharField(
-        required=False,
-        label='Комментарий к заказу',
-        widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'})
-    )
-    cart_id = forms.IntegerField(widget=forms.HiddenInput(), required=True)
+    def __init__(self, *args, **kwargs):
+        """Инициализация формы с актуальными корзинами"""
+        super().__init__(*args, **kwargs)
+        # Здесь можно установить актуальный queryset для cart
+        # self.fields['cart'].queryset = Cart.objects.filter(...)
