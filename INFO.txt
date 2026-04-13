@@ -1,6 +1,0 @@
-Суперпользователь: admin (пароль adminpass)
-
-База данных: online_store_db
-Пользователь: django_user (пароль secure_password)
-
-Остановился: 7
