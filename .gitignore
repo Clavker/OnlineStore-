@@ -34,3 +34,27 @@ __pycache__/
 
 # Личные файлы
 INFO.txt
+
+# База данных
+db.sqlite3
+test_db.sqlite3
+
+# Статика
+static/
+media/
+
+# Кэш Python
+__pycache__/
+*.pyc
+
+# IDE
+.idea/
+.vscode/
+
+# Логи и экспорт
+*.log
+*.csv
+*.json
+
+# Личные файлы
+INFO.txt
