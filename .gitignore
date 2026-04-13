@@ -1,60 +1,40 @@
-.env
-*.pyc
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Django
+*.log
+*.pot
+*.pyc
 db.sqlite3
+test_db.sqlite3
 static/
 media/
 .DS_Store
-.venv/
-.vscode/
-.idea/
-*.log
-INFO.txt
-
-# База данных
-db.sqlite3
-test_db.sqlite3
-
-# Статика
-static/
-media/
-
-# Кэш Python
-__pycache__/
-*.pyc
 
 # IDE
 .idea/
 .vscode/
+*.swp
+*.swo
 
-# Логи и экспорт
-*.log
-*.csv
-*.json
-
-# Личные файлы
+# Secrets
+.env
 INFO.txt
 
-# База данных
-db.sqlite3
-test_db.sqlite3
-
-# Статика
-static/
-media/
-
-# Кэш Python
-__pycache__/
-*.pyc
-
-# IDE
-.idea/
-.vscode/
-
-# Логи и экспорт
-*.log
+# Exports
 *.csv
 *.json
+!fixtures/*.json
 
-# Личные файлы
-INFO.txt
+# Project specific
+customer_form.html
+product_residues.csv
+project_dump.txt
