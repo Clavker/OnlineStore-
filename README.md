@@ -41,6 +41,7 @@ DB_PASSWORD=secure_password
 DB_HOST=localhost
 DB_PORT=5432
 DEBUG=True
+ALLOWED_HOSTS=127.0.0.1,localhost
 ```
 
 ### 3. Установка зависимостей
