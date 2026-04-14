@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+ENV/
+env/
+
+# Django
+*.log
+*.pot
+*.pyc
+db.sqlite3
+test_db.sqlite3
+static/
+media/
+.DS_Store
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Secrets
+.env
+INFO.txt
+
+# Exports
+*.csv
+*.json
+!fixtures/*.json
+
+# Project specific
+customer_form.html
+product_residues.csv
+project_dump.txt

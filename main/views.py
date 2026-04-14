@@ -7,7 +7,7 @@ from .models import (
     Category, Product, Customer,
     Cart, CartItem, Order, OrderItem
 )
-from .forms import CartAddForm, CartItemUpdateForm, OrderForm
+from .forms import CartAddForm, CartItemUpdateForm, OrderForm, ProductForm
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login
 
@@ -27,56 +27,40 @@ def product_detail(request, pk):
 
 @staff_member_required
 def product_create(request):
-    """Создание нового товара (только для персонала)"""
+    """Создание нового товара с использованием ProductForm"""
     if request.method == 'POST':
-        name = request.POST.get('name')
-        description = request.POST.get('description')
-        price = request.POST.get('price')
-        stock = request.POST.get('stock')
-        category_id = request.POST.get('category')
+        form = ProductForm(request.POST, request.FILES)
+        if form.is_valid():
+            product = form.save()
+            messages.success(request, f'Товар "{product.name}" успешно создан')
+            return redirect('product_detail', pk=product.pk)
+    else:
+        form = ProductForm()
 
-        if name and price and stock and category_id:
-            category = get_object_or_404(Category, pk=category_id)
-            Product.objects.create(
-                name=name,
-                description=description,
-                price=price,
-                stock=stock,
-                category=category
-            )
-            messages.success(request, 'Товар успешно создан')
-            return redirect('product_list')
-
-    categories = Category.objects.all()
     return render(request, 'main/product_form.html', {
-        'categories': categories,
+        'form': form,
         'action': 'Создать'
     })
 
 
 @staff_member_required
 def product_update(request, pk):
-    """Редактирование товара (только для персонала)"""
+    """Редактирование товара с использованием ProductForm"""
     product = get_object_or_404(Product, pk=pk)
 
     if request.method == 'POST':
-        product.name = request.POST.get('name')
-        product.description = request.POST.get('description')
-        product.price = request.POST.get('price')
-        product.stock = request.POST.get('stock')
-        category_id = request.POST.get('category')
+        form = ProductForm(request.POST, request.FILES, instance=product)
+        if form.is_valid():
+            form.save()
+            messages.success(request,
+                             f'Товар "{product.name}" успешно обновлён')
+            return redirect('product_detail', pk=product.pk)
+    else:
+        form = ProductForm(instance=product)
 
-        if category_id:
-            product.category = get_object_or_404(Category, pk=category_id)
-
-        product.save()
-        messages.success(request, 'Товар успешно обновлён')
-        return redirect('product_detail', pk=product.pk)
-
-    categories = Category.objects.all()
     return render(request, 'main/product_form.html', {
+        'form': form,
         'product': product,
-        'categories': categories,
         'action': 'Редактировать'
     })
 
@@ -451,14 +435,15 @@ def order_create_from_cart(request, cart_id):
                 messages.error(request, 'Корзина пуста')
                 return redirect('cart_detail', pk=cart.pk)
 
-            # Проверяем наличие всех товаров
+            # Проверяем наличие всех товаров с блокировкой для гонки данных
             for item in cart.items.all():
-                if item.quantity > item.product.stock:
+                product = Product.objects.select_for_update().get(
+                    pk=item.product.pk)
+                if item.quantity > product.stock:
                     messages.error(
                         request,
-                        f'Товара "{item.product.name}" недостаточно на складе. '
-                        f'Доступно: {item.product.stock}, '
-                        f'в корзине: {item.quantity}'
+                        f'Товара "{product.name}" недостаточно на складе. '
+                        f'Доступно: {product.stock}, в корзине: {item.quantity}'
                     )
                     return redirect('cart_detail', pk=cart.pk)
 
@@ -471,7 +456,11 @@ def order_create_from_cart(request, cart_id):
             order = Order.objects.create(
                 customer=cart.customer,
                 total_price=total_price,
-                status='new'
+                status='new',
+                delivery_name=name,
+                delivery_address=address,
+                contact_email=email,
+                comment=comment
             )
 
             # Переносим позиции из корзины в заказ
@@ -520,15 +509,16 @@ def order_create_from_cart(request, cart_id):
 @login_required
 def order_update_status(request, pk):
     """Обновление статуса заказа (только для персонала)"""
-    order = get_object_or_404(Order, pk=pk, customer__user=request.user)
-
-    # Обычные пользователи не могут менять статус
+    # Сначала проверяем права
     if not request.user.is_staff:
         messages.error(
             request,
             'У вас нет прав для изменения статуса заказа'
         )
-        return redirect('order_detail', pk=order.pk)
+        return redirect('order_detail', pk=pk)
+
+    # Только после проверки прав ищем заказ
+    order = get_object_or_404(Order, pk=pk)
 
     if request.method == 'POST':
         new_status = request.POST.get('status')

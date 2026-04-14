@@ -1,5 +1,5 @@
 from django import forms
-from .models import CartItem
+from .models import CartItem, Product
 
 
 class CartAddForm(forms.Form):
@@ -55,10 +55,9 @@ class OrderForm(forms.Form):
         label='Email',
         widget=forms.EmailInput(attrs={'class': 'form-control'})
     )
-    cart = forms.ModelChoiceField(
-        queryset=CartItem.objects.none(),  # Пустой queryset, будет заменён
-        label='Корзина',
-        widget=forms.Select(attrs={'class': 'form-control'})
+    cart = forms.IntegerField(
+        widget=forms.HiddenInput(),
+        required=True
     )
     comment = forms.CharField(
         required=False,
@@ -66,8 +65,14 @@ class OrderForm(forms.Form):
         widget=forms.Textarea(attrs={'rows': 3, 'class': 'form-control'})
     )
 
-    def __init__(self, *args, **kwargs):
-        """Инициализация формы с актуальными корзинами"""
-        super().__init__(*args, **kwargs)
-        # Здесь можно установить актуальный queryset для cart
-        # self.fields['cart'].queryset = Cart.objects.filter(...)
+
+class ProductForm(forms.ModelForm):
+    """Форма для создания и редактирования товара"""
+    class Meta:
+        model = Product
+        fields = ['name', 'description', 'price', 'stock', 'category', 'image']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4, 'class': 'form-control'}),
+            'price': forms.NumberInput(attrs={'step': '0.01', 'class': 'form-control'}),
+            'stock': forms.NumberInput(attrs={'min': '0', 'class': 'form-control'}),
+        }
