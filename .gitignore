@@ -38,3 +38,9 @@ INFO.txt
 customer_form.html
 product_residues.csv
 project_dump.txt
+
+# Coverage reports
+.coverage
+.coverage*
+htmlcov/
+.pytest_cache/
