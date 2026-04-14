@@ -8,6 +8,10 @@ ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV DJANGO_SETTINGS_MODULE=online_store.settings
 
+# Меняем репозитории на зеркала Яндекса (Россия)
+RUN sed -i 's/deb.debian.org/mirror.yandex.ru/g' /etc/apt/sources.list.d/debian.sources && \
+    sed -i 's/security.debian.org/mirror.yandex.ru/g' /etc/apt/sources.list.d/debian.sources
+
 # Устанавливаем системные зависимости для psycopg2
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
@@ -23,7 +27,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Копируем весь проект
 COPY . /app/
 
-# Выполняем миграции и сбор статики (на этапе сборки)
+# Выполняем сбор статики (на этапе сборки)
 RUN python manage.py collectstatic --noinput
 
 # Открываем порт
