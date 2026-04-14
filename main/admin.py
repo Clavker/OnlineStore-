@@ -20,7 +20,15 @@ class ProductAdmin(admin.ModelAdmin):
     list_filter = ('category',)
     search_fields = ('name', 'description')
     list_editable = ('price', 'stock')
-    fields = ('name', 'description', 'price', 'stock', 'category')
+    fields = ('name', 'description', 'price', 'stock', 'category', 'image')
+
+    def image_preview(self, obj):
+        """Превью изображения в списке товаров"""
+        if obj.image:
+            from django.utils.html import format_html
+            return format_html('<img src="{}" width="50" height="50" style="border-radius: 4px;" />', obj.image.url)
+        return "Нет изображения"
+    image_preview.short_description = 'Изображение'
 
 
 @admin.register(Customer)
