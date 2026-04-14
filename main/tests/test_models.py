@@ -31,9 +31,10 @@ class ProductModelTest(TestCase):
         self.assertEqual(str(self.product), 'Смартфон X')
 
     def test_product_stock_can_be_negative(self):
+        """Тест: остаток не может быть отрицательным"""
         self.product.stock = -5
-        self.product.save()
-        self.assertEqual(self.product.stock, -5)
+        with self.assertRaises(Exception):
+            self.product.save()
 
 
 class CategoryModelTest(TestCase):
